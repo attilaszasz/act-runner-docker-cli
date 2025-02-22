@@ -1,0 +1,11 @@
+FROM gitea/act_runner:0.2.11
+
+# Install Docker CLI
+RUN apt-get update -yq
+RUN apt-get install -yq curl ca-certificates
+RUN apt-get install -y docker.io
+
+# Install Docker Compose
+RUN mkdir -p /root/.docker/cli-plugins
+RUN curl -SL https://github.com/docker/compose/releases/download/v2.33.0/docker-compose-linux-x86_64 -o /root/.docker/cli-plugins/docker-compose
+RUN chmod +x /root/.docker/cli-plugins/docker-compose
