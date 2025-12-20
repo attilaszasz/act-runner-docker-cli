@@ -10,7 +10,7 @@ RUN mkdir -p /root/.docker/cli-plugins
 RUN curl -SL https://github.com/docker/compose/releases/download/v5.0.1/docker-compose-linux-x86_64 -o /root/.docker/cli-plugins/docker-compose
 RUN chmod +x /root/.docker/cli-plugins/docker-compose
 
-FROM gitea/act_runner:0.2.11
+FROM gitea/act_runner:0.2.13
 
 # Copy Docker CLI and Docker Compose from build image
 COPY --from=build /root/.docker /root/.docker
