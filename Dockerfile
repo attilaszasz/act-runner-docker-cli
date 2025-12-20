@@ -14,7 +14,6 @@ RUN apt-get update -yq && \
     case ${ARCH} in \
         x86_64) COMPOSE_ARCH=x86_64 ;; \
         aarch64|arm64) COMPOSE_ARCH=aarch64 ;; \
-        armv7l) COMPOSE_ARCH=armv7 ;; \
         *) echo "Unsupported architecture: ${ARCH}" && exit 1 ;; \
     esac && \
     curl -SL "https://github.com/docker/compose/releases/download/v5.0.1/docker-compose-linux-${COMPOSE_ARCH}" \
