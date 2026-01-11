@@ -4,8 +4,8 @@ A Docker image based on [Gitea Act Runner](https://gitea.com/gitea/act_runner) w
 
 ## Features
 
-- **Base Image**: `gitea/act_runner:0.2.13`
-- **Docker CLI**: Latest version from official Docker image (`docker:27-cli`)
+- **Base Image**: [`gitea/act_runner:0.2.13`](https://gitea.com/gitea/act_runner/releases/tag/v0.2.13)
+- **Docker CLI**: Latest version from official Docker image ([`docker:27-cli`](https://hub.docker.com/layers/library/docker/27-cli/images/sha256-66bcf09dd274c9c89986d391079bae33ef358585fab3e9fd7227d691c296431f?context=explore))
 - **Docker Compose**: v5.0.1 (installed as a Docker CLI plugin)
 - **Multi-Architecture Support**: Available for `linux/amd64` and `linux/arm64`
 - **Lightweight**: Optimized build with minimal layers and cleaned package caches
