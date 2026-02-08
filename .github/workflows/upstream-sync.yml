@@ -27,7 +27,15 @@ jobs:
       - name: Get latest upstream release
         id: upstream
         run: |
-          LATEST_TAG=$(curl -s https://api.github.com/repos/gitea/act_runner/releases/latest | jq -r '.tag_name')
+          RESPONSE=$(curl -s https://api.github.com/repos/gitea/act_runner/releases/latest)
+          LATEST_TAG=$(echo "$RESPONSE" | jq -r '.tag_name')
+          
+          if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" = "null" ]; then
+            echo "Error: Failed to get latest release tag"
+            echo "$RESPONSE"
+            exit 1
+          fi
+          
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
           echo "Latest upstream tag: $LATEST_TAG"
 
@@ -58,11 +66,19 @@ jobs:
         run: |
           # Extract version without 'v' prefix
           VERSION="${{ steps.upstream.outputs.latest_tag }}"
+          
+          if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+            echo "Error: Invalid version: $VERSION"
+            exit 1
+          fi
+          
           VERSION_NUMBER="${VERSION#v}"
           
           # Update the FROM line in Dockerfile
-          sed -i "s|FROM gitea/act_runner:.*|FROM gitea/act_runner:${VERSION_NUMBER}|" Dockerfile
+          sed -i "s|^FROM gitea/act_runner:.*|FROM gitea/act_runner:${VERSION_NUMBER}|" Dockerfile
           
+          # Verify the update
+          grep "FROM gitea/act_runner" Dockerfile
           echo "Updated Dockerfile to use act_runner:${VERSION_NUMBER}"
 
       - name: Install cosign
@@ -117,14 +133,15 @@ jobs:
         if: steps.check.outputs.needs_update == 'true'
         run: |
           # Update UPSTREAM_VERSION file
-          echo "${{ steps.upstream.outputs.latest_tag }}" > UPSTREAM_VERSION
+          VERSION="${{ steps.upstream.outputs.latest_tag }}"
+          VERSION_NUMBER="${VERSION#v}"
+          
+          echo "$VERSION" > UPSTREAM_VERSION
           
           # Update README with new version
-          VERSION_NUMBER="${{ steps.upstream.outputs.latest_tag }}"
-          VERSION_NUMBER="${VERSION_NUMBER#v}"
           sed -i "s|gitea/act_runner:[0-9.]*|gitea/act_runner:${VERSION_NUMBER}|g" README.md
           
-          echo "Updated version tracking files"
+          echo "Updated version tracking files to $VERSION (${VERSION_NUMBER})"
 
       - name: Commit and push changes
         if: steps.check.outputs.needs_update == 'true'
