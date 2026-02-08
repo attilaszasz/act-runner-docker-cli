@@ -27,7 +27,7 @@ jobs:
       - name: Get latest upstream release
         id: upstream
         run: |
-          RESPONSE=$(curl -s https://api.github.com/repos/gitea/act_runner/releases/latest)
+          RESPONSE=$(curl -s https://gitea.com/api/v1/repos/gitea/act_runner/releases/latest)
           LATEST_TAG=$(echo "$RESPONSE" | jq -r '.tag_name')
           
           if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" = "null" ]; then
