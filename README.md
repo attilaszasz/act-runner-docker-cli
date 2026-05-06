@@ -4,7 +4,7 @@ A Docker image based on [Gitea Runner](https://gitea.com/gitea/runner) with Dock
 
 ## Features
 
-- **Base Image**: [`gitea/runner:0.6.1`](https://gitea.com/gitea/runner/releases/tag/v0.6.1)
+- **Base Image**: [`gitea/runner:1.0.0`](https://gitea.com/gitea/runner/releases/tag/v0.6.1)
 - **Docker CLI**: Latest version from official Docker image ([`docker:27-cli`](https://hub.docker.com/layers/library/docker/27-cli/images/sha256-66bcf09dd274c9c89986d391079bae33ef358585fab3e9fd7227d691c296431f?context=explore))
 - **Docker Compose**: v5.0.1 (installed as a Docker CLI plugin)
 - **Multi-Architecture Support**: Available for `linux/amd64` and `linux/arm64`
@@ -76,7 +76,7 @@ services:
     networks:
       - gitea
     volumes:
-      - ./gitea/runner:/data
+      - ./gitea/runner:1.0.0/data
       - /var/run/docker.sock:/var/run/docker.sock
 ```
 

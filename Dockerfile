@@ -21,7 +21,7 @@ RUN apt-get update -yq && \
     chmod +x /root/.docker/cli-plugins/docker-compose
 
 # Final stage
-FROM gitea/runner:0.6.1
+FROM gitea/runner:1.0.0
 
 # Copy Docker CLI from official Docker image
 COPY --from=docker-cli /usr/local/bin/docker /usr/bin/docker
