@@ -76,11 +76,11 @@ jobs:
           VERSION_NUMBER="${VERSION#v}"
           
           # Update the FROM line in Dockerfile
-          sed -i "s|^FROM gitea/act_runner:.*|FROM gitea/act_runner:${VERSION_NUMBER}|" Dockerfile
+          sed -i "s|^FROM gitea/runner:.*|FROM gitea/runner:${VERSION_NUMBER}|" Dockerfile
           
           # Verify the update
-          grep "FROM gitea/act_runner" Dockerfile
-          echo "Updated Dockerfile to use act_runner:${VERSION_NUMBER}"
+          grep "FROM gitea/runner" Dockerfile
+          echo "Updated Dockerfile to use runner:${VERSION_NUMBER}"
 
       - name: Install cosign
         if: steps.check.outputs.needs_update == 'true'
@@ -140,7 +140,7 @@ jobs:
           echo "$VERSION" > UPSTREAM_VERSION
           
           # Update README with new version
-          sed -i "s|gitea/act_runner:[0-9.]*|gitea/act_runner:${VERSION_NUMBER}|g" README.md
+          sed -i "s|gitea/runner:[0-9.]*|gitea/runner:${VERSION_NUMBER}|g" README.md
           
           echo "Updated version tracking files to $VERSION (${VERSION_NUMBER})"
 

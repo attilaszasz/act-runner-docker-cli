@@ -1,10 +1,10 @@
 # act-runner-docker-cli
 
-A Docker image based on [Gitea Act Runner](https://gitea.com/gitea/act_runner) with Docker CLI and Docker Compose pre-installed, enabling your CI/CD workflows to build, run, and manage Docker containers and compose projects.
+A Docker image based on [Gitea Runner](https://gitea.com/gitea/runner) with Docker CLI and Docker Compose pre-installed, enabling your CI/CD workflows to build, run, and manage Docker containers and compose projects.
 
 ## Features
 
-- **Base Image**: [`gitea/act_runner:0.6.1`](https://gitea.com/gitea/act_runner/releases/tag/v0.2.13)
+- **Base Image**: [`gitea/runner:0.6.1`](https://gitea.com/gitea/runner/releases/tag/v0.6.1)
 - **Docker CLI**: Latest version from official Docker image ([`docker:27-cli`](https://hub.docker.com/layers/library/docker/27-cli/images/sha256-66bcf09dd274c9c89986d391079bae33ef358585fab3e9fd7227d691c296431f?context=explore))
 - **Docker Compose**: v5.0.1 (installed as a Docker CLI plugin)
 - **Multi-Architecture Support**: Available for `linux/amd64` and `linux/arm64`
@@ -575,12 +575,12 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project builds upon the official Gitea Act Runner. See the [Gitea Act Runner repository](https://gitea.com/gitea/act_runner) for license information.
+This project builds upon the official Gitea Runner. See the [Gitea Runner repository](https://gitea.com/gitea/runner) for license information.
 
 ## Related Projects
 
 - [Gitea](https://gitea.com) - Self-hosted Git service
-- [Gitea Act Runner](https://gitea.com/gitea/act_runner) - Official Gitea Actions runner
+- [Gitea Runner](https://gitea.com/gitea/runner) - Official Gitea Actions runner
 
 ## Support
 
