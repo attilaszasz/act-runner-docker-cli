@@ -1,8 +1,8 @@
 # Use official Docker image to get Docker CLI
 FROM docker:27-cli AS docker-cli
 
-# Use official Node.js image to get Node 24 LTS tooling
-FROM node:24-bookworm-slim AS nodejs
+# Use official Node.js image to get Node 24 LTS tooling compatible with Alpine
+FROM node:24-alpine AS nodejs
 
 # Build stage for Docker Compose
 FROM ubuntu:24.04 AS build
@@ -25,6 +25,9 @@ RUN apt-get update -yq && \
 
 # Final stage
 FROM gitea/runner:1.0.0
+
+# Node.js on Alpine requires the standard C++ runtime.
+RUN apk add --no-cache libstdc++
 
 # Copy Docker CLI from official Docker image
 COPY --from=docker-cli /usr/local/bin/docker /usr/bin/docker
