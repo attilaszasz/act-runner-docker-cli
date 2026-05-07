@@ -1,12 +1,13 @@
 # act-runner-docker-cli
 
-A Docker image based on [Gitea Runner](https://gitea.com/gitea/runner) with Docker CLI and Docker Compose pre-installed, enabling your CI/CD workflows to build, run, and manage Docker containers and compose projects.
+A Docker image based on [Gitea Runner](https://gitea.com/gitea/runner) with Docker CLI, Docker Compose, and Node.js 24 LTS pre-installed, enabling your CI/CD workflows to build, run, and manage Docker containers, compose projects, and Node-based tooling.
 
 ## Features
 
 - **Base Image**: [`gitea/runner:1.0.0`](https://gitea.com/gitea/runner/releases/tag/v0.6.1)
 - **Docker CLI**: Latest version from official Docker image ([`docker:27-cli`](https://hub.docker.com/layers/library/docker/27-cli/images/sha256-66bcf09dd274c9c89986d391079bae33ef358585fab3e9fd7227d691c296431f?context=explore))
 - **Docker Compose**: v5.0.1 (installed as a Docker CLI plugin)
+- **Node.js**: 24 LTS from the official Node image, including `npm`, `npx`, and `corepack`
 - **Multi-Architecture Support**: Available for `linux/amd64` and `linux/arm64`
 - **Lightweight**: Optimized build with minimal layers and cleaned package caches
 
@@ -225,6 +226,17 @@ docker exec gitea-runner docker compose version
 ```
 
 Should output: `Docker Compose version v5.0.1`
+
+### Node Commands Not Found
+
+Verify Node.js is installed correctly:
+
+```bash
+docker exec gitea-runner node --version
+docker exec gitea-runner npm --version
+```
+
+Should report a Node.js 24.x release and the bundled npm version.
 
 ## GitOps for Homelab
 

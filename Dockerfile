@@ -1,6 +1,9 @@
 # Use official Docker image to get Docker CLI
 FROM docker:27-cli AS docker-cli
 
+# Use official Node.js image to get Node 24 LTS tooling
+FROM node:24-bookworm-slim AS nodejs
+
 # Build stage for Docker Compose
 FROM ubuntu:24.04 AS build
 
@@ -26,8 +29,15 @@ FROM gitea/runner:1.0.0
 # Copy Docker CLI from official Docker image
 COPY --from=docker-cli /usr/local/bin/docker /usr/bin/docker
 
+# Copy Node.js runtime and bundled CLI tools
+COPY --from=nodejs /usr/local/bin/node /usr/local/bin/node
+COPY --from=nodejs /usr/local/bin/npm /usr/local/bin/npm
+COPY --from=nodejs /usr/local/bin/npx /usr/local/bin/npx
+COPY --from=nodejs /usr/local/bin/corepack /usr/local/bin/corepack
+COPY --from=nodejs /usr/local/lib/node_modules /usr/local/lib/node_modules
+
 # Copy Docker Compose plugin
 COPY --from=build /root/.docker/cli-plugins/docker-compose /root/.docker/cli-plugins/docker-compose
 
 # Verify installations
-RUN docker --version && docker compose version
+RUN docker --version && docker compose version && node --version && npm --version
