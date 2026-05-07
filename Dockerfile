@@ -34,10 +34,11 @@ COPY --from=docker-cli /usr/local/bin/docker /usr/bin/docker
 
 # Copy Node.js runtime and bundled CLI tools
 COPY --from=nodejs /usr/local/bin/node /usr/local/bin/node
-COPY --from=nodejs /usr/local/bin/npm /usr/local/bin/npm
-COPY --from=nodejs /usr/local/bin/npx /usr/local/bin/npx
-COPY --from=nodejs /usr/local/bin/corepack /usr/local/bin/corepack
 COPY --from=nodejs /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -sf node /usr/local/bin/nodejs && \
+    ln -sf ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
+    ln -sf ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx && \
+    ln -sf ../lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack
 
 # Copy Docker Compose plugin
 COPY --from=build /root/.docker/cli-plugins/docker-compose /root/.docker/cli-plugins/docker-compose
