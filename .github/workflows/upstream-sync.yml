@@ -1,4 +1,4 @@
-name: Sync with upstream act_runner releases
+name: Sync with upstream runner releases
 
 on:
   schedule:
@@ -24,21 +24,137 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get latest upstream release
+      - name: Resolve latest upstream release
         id: upstream
         run: |
+          set -euo pipefail
+
           # Note: The Gitea source repo was renamed from gitea/act_runner to gitea/runner
-          RESPONSE=$(curl -sL https://gitea.com/api/v1/repos/gitea/runner/releases/latest)
-          LATEST_TAG=$(echo "$RESPONSE" | jq -r '.tag_name')
-          
-          if [ -z "$LATEST_TAG" ] || [ "$LATEST_TAG" = "null" ]; then
-            echo "Error: Failed to get latest release tag"
-            echo "$RESPONSE"
+          latest_url="https://gitea.com/api/v1/repos/gitea/runner/releases/latest"
+          releases_url="https://gitea.com/api/v1/repos/gitea/runner/releases?limit=20"
+          body_file="$(mktemp)"
+
+          cleanup() {
+            rm -f "$body_file"
+          }
+
+          request_json() {
+            local url="$1"
+            local output_file="$2"
+            local status
+
+            status=$(curl \
+              --silent \
+              --show-error \
+              --location \
+              --retry 3 \
+              --retry-all-errors \
+              --retry-delay 5 \
+              --connect-timeout 10 \
+              --max-time 60 \
+              --header 'Accept: application/json' \
+              --user-agent "github-actions/${GITHUB_REPOSITORY}" \
+              --output "$output_file" \
+              --write-out '%{http_code}' \
+              "$url") || return 1
+
+            printf '%s' "$status"
+          }
+
+          is_json() {
+            jq -e . "$1" >/dev/null 2>&1
+          }
+
+          summarize_response() {
+            local label="$1"
+            local file="$2"
+
+            if is_json "$file"; then
+              jq -c '
+                if type == "array" then
+                  {
+                    count: length,
+                    first: ((.[0] // {}) | {
+                      tag_name,
+                      draft,
+                      prerelease,
+                      published_at,
+                      created_at
+                    })
+                  }
+                else
+                  {
+                    tag_name,
+                    draft,
+                    prerelease,
+                    published_at,
+                    created_at,
+                    message,
+                    error
+                  }
+                end
+              ' "$file" | sed "s/^/${label} response summary: /"
+            elif [ -s "$file" ]; then
+              echo "${label} returned a non-JSON response body:"
+              head -c 1000 "$file"
+              echo
+            else
+              echo "${label} returned an empty response body"
+            fi
+          }
+
+          latest_tag=""
+          trap cleanup EXIT
+
+          if latest_status=$(request_json "$latest_url" "$body_file"); then
+            echo "Latest endpoint HTTP status: $latest_status"
+            summarize_response "Latest endpoint" "$body_file"
+
+            if [ "$latest_status" = "200" ] && is_json "$body_file"; then
+              latest_tag=$(jq -r '
+                if (.draft == false and .prerelease == false) then
+                  .tag_name // empty
+                else
+                  empty
+                end
+              ' "$body_file")
+            fi
+          else
+            echo "Latest endpoint request failed before a response was received"
+          fi
+
+          if [ -z "$latest_tag" ]; then
+            echo "Falling back to release list lookup"
+
+            if releases_status=$(request_json "$releases_url" "$body_file"); then
+              echo "Fallback endpoint HTTP status: $releases_status"
+              summarize_response "Fallback endpoint" "$body_file"
+
+              if [ "$releases_status" = "200" ] && is_json "$body_file"; then
+                latest_tag=$(jq -r '
+                  map(select(
+                    .draft == false and
+                    .prerelease == false and
+                    (.tag_name // "") != ""
+                  ))
+                  | sort_by(.published_at // .created_at // "")
+                  | if length > 0 then .[-1].tag_name else empty end
+                ' "$body_file")
+              fi
+            else
+              echo "Fallback endpoint request failed before a response was received"
+            fi
+          fi
+
+          if [ -z "$latest_tag" ]; then
+            echo "Error: Failed to resolve latest stable release tag"
+            echo "Latest endpoint: $latest_url"
+            echo "Fallback endpoint: $releases_url"
             exit 1
           fi
-          
-          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "Latest upstream tag: $LATEST_TAG"
+
+          echo "latest_tag=$latest_tag" >> "$GITHUB_OUTPUT"
+          echo "Latest upstream tag: $latest_tag"
 
       - name: Read current version
         id: current
@@ -133,14 +249,27 @@ jobs:
       - name: Update version tracking files
         if: steps.check.outputs.needs_update == 'true'
         run: |
+          set -euo pipefail
+
           # Update UPSTREAM_VERSION file
           VERSION="${{ steps.upstream.outputs.latest_tag }}"
           VERSION_NUMBER="${VERSION#v}"
           
           echo "$VERSION" > UPSTREAM_VERSION
           
-          # Update README with new version
-          sed -i "s|gitea/runner:[0-9.]*|gitea/runner:${VERSION_NUMBER}|g" README.md
+          # Update README with the tracked base image version without touching sample volume paths.
+          awk -v version="$VERSION" -v version_number="$VERSION_NUMBER" '
+            /^- \*\*Base Image\*\*: \[`gitea\/runner:/ {
+              print "- **Base Image**: [`gitea/runner:" version_number "`](https://gitea.com/gitea/runner/releases/tag/" version ")"
+              next
+            }
+            /^      - \.\/gitea\/runner:[0-9.]+\/data$/ || /^      - \.\/runner-data:\/data$/ {
+              print "      - ./runner-data:/data"
+              next
+            }
+            { print }
+          ' README.md > README.md.tmp
+          mv README.md.tmp README.md
           
           echo "Updated version tracking files to $VERSION (${VERSION_NUMBER})"
 
@@ -150,7 +279,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add Dockerfile UPSTREAM_VERSION README.md
-          git commit -m "chore: update to act_runner ${{ steps.upstream.outputs.latest_tag }}"
+          git commit -m "chore: update to runner ${{ steps.upstream.outputs.latest_tag }}"
           git push
 
       - name: Create release tag
