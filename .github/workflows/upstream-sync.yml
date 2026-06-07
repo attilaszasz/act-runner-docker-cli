@@ -29,20 +29,55 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Note: The Gitea source repo was renamed from gitea/act_runner to gitea/runner
-          latest_url="https://gitea.com/api/v1/repos/gitea/runner/releases/latest"
-          releases_url="https://gitea.com/api/v1/repos/gitea/runner/releases?limit=20"
           body_file="$(mktemp)"
 
           cleanup() {
             rm -f "$body_file"
           }
+          trap cleanup EXIT
 
-          request_json() {
-            local url="$1"
-            local output_file="$2"
-            local status
+          # Primary source: Docker Hub API (no auth needed, widely accessible)
+          docker_hub_url="https://hub.docker.com/v2/repositories/gitea/runner/tags?page_size=100"
 
+          echo "Fetching tags from Docker Hub..."
+          status=$(curl \
+            --silent \
+            --show-error \
+            --location \
+            --retry 3 \
+            --retry-all-errors \
+            --retry-delay 5 \
+            --connect-timeout 10 \
+            --max-time 60 \
+            --header 'Accept: application/json' \
+            --output "$body_file" \
+            --write-out '%{http_code}' \
+            "$docker_hub_url") || status="FAIL"
+
+          latest_tag=""
+
+          if [ "$status" = "200" ]; then
+            latest_version=$(jq -r '
+              [.results[] | select(.name | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) | .name]
+              | sort_by(. | split(".") | map(tonumber))
+              | last // empty
+            ' "$body_file" 2>/dev/null) || latest_version=""
+
+            if [ -n "$latest_version" ]; then
+              latest_tag="v${latest_version}"
+              echo "Resolved from Docker Hub: $latest_tag"
+            else
+              echo "Docker Hub response was valid but no semver tags found"
+            fi
+          else
+            echo "Docker Hub API returned HTTP $status"
+          fi
+
+          # Fallback: Gitea API
+          if [ -z "$latest_tag" ]; then
+            releases_url="https://gitea.com/api/v1/repos/gitea/runner/releases?limit=20"
+
+            echo "Falling back to Gitea releases API..."
             status=$(curl \
               --silent \
               --show-error \
@@ -53,103 +88,36 @@ jobs:
               --connect-timeout 10 \
               --max-time 60 \
               --header 'Accept: application/json' \
-              --user-agent "github-actions/${GITHUB_REPOSITORY}" \
-              --output "$output_file" \
+              --output "$body_file" \
               --write-out '%{http_code}' \
-              "$url") || return 1
+              "$releases_url") || status="FAIL"
 
-            printf '%s' "$status"
-          }
-
-          is_json() {
-            jq -e . "$1" >/dev/null 2>&1
-          }
-
-          summarize_response() {
-            local label="$1"
-            local file="$2"
-
-            if is_json "$file"; then
-              jq -c '
-                if type == "array" then
-                  {
-                    count: length,
-                    first: ((.[0] // {}) | {
-                      tag_name,
-                      draft,
-                      prerelease,
-                      published_at,
-                      created_at
-                    })
-                  }
-                else
-                  {
-                    tag_name,
-                    draft,
-                    prerelease,
-                    published_at,
-                    created_at,
-                    message,
-                    error
-                  }
-                end
-              ' "$file" | sed "s/^/${label} response summary: /"
-            elif [ -s "$file" ]; then
-              echo "${label} returned a non-JSON response body:"
-              head -c 1000 "$file"
-              echo
-            else
-              echo "${label} returned an empty response body"
-            fi
-          }
-
-          latest_tag=""
-          trap cleanup EXIT
-
-          if latest_status=$(request_json "$latest_url" "$body_file"); then
-            echo "Latest endpoint HTTP status: $latest_status"
-            summarize_response "Latest endpoint" "$body_file"
-
-            if [ "$latest_status" = "200" ] && is_json "$body_file"; then
+            if [ "$status" = "200" ]; then
               latest_tag=$(jq -r '
-                if (.draft == false and .prerelease == false) then
-                  .tag_name // empty
-                else
-                  empty
-                end
-              ' "$body_file")
-            fi
-          else
-            echo "Latest endpoint request failed before a response was received"
-          fi
+                map(select(
+                  .draft == false and
+                  .prerelease == false and
+                  (.tag_name // "") != ""
+                ))
+                | sort_by(.published_at // .created_at // "")
+                | if length > 0 then .[-1].tag_name else empty end
+              ' "$body_file" 2>/dev/null) || latest_tag=""
 
-          if [ -z "$latest_tag" ]; then
-            echo "Falling back to release list lookup"
-
-            if releases_status=$(request_json "$releases_url" "$body_file"); then
-              echo "Fallback endpoint HTTP status: $releases_status"
-              summarize_response "Fallback endpoint" "$body_file"
-
-              if [ "$releases_status" = "200" ] && is_json "$body_file"; then
-                latest_tag=$(jq -r '
-                  map(select(
-                    .draft == false and
-                    .prerelease == false and
-                    (.tag_name // "") != ""
-                  ))
-                  | sort_by(.published_at // .created_at // "")
-                  | if length > 0 then .[-1].tag_name else empty end
-                ' "$body_file")
+              if [ -n "$latest_tag" ]; then
+                echo "Resolved from Gitea API: $latest_tag"
+              else
+                echo "Gitea API response was valid but no stable release found"
               fi
             else
-              echo "Fallback endpoint request failed before a response was received"
+              echo "Gitea API returned HTTP $status"
             fi
           fi
 
           if [ -z "$latest_tag" ]; then
             echo "Error: Failed to resolve latest stable release tag"
-            echo "Latest endpoint: $latest_url"
-            echo "Fallback endpoint: $releases_url"
+            echo "Tried:"
+            echo "  - Docker Hub API: $docker_hub_url"
+            echo "  - Gitea API: https://gitea.com/api/v1/repos/gitea/runner/releases?limit=20"
             exit 1
           fi
 
