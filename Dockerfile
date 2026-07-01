@@ -24,7 +24,7 @@ RUN apt-get update -yq && \
     chmod +x /root/.docker/cli-plugins/docker-compose
 
 # Final stage
-FROM gitea/runner:1.0.8
+FROM gitea/runner:2.0.0
 
 # Node.js on Alpine requires the standard C++ runtime.
 RUN apk add --no-cache libstdc++
