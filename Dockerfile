@@ -26,8 +26,8 @@ RUN apt-get update -yq && \
 # Final stage
 FROM gitea/runner:1.0.8
 
-# Node.js on Alpine requires the standard C++ runtime.
-RUN apk add --no-cache libstdc++
+# Install yq and the standard C++ runtime required by Node.js.
+RUN apk add --no-cache libstdc++ yq
 
 # Copy Docker CLI from official Docker image
 COPY --from=docker-cli /usr/local/bin/docker /usr/bin/docker
@@ -44,4 +44,4 @@ RUN ln -sf node /usr/local/bin/nodejs && \
 COPY --from=build /root/.docker/cli-plugins/docker-compose /root/.docker/cli-plugins/docker-compose
 
 # Verify installations
-RUN docker --version && docker compose version && node --version && npm --version
+RUN docker --version && docker compose version && node --version && npm --version && yq --version
