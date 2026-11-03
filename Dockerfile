@@ -24,7 +24,7 @@ RUN apt-get update -yq && \
     chmod +x /root/.docker/cli-plugins/docker-compose
 
 # Final stage
-FROM gitea/runner:5.2.4
+FROM gitea/runner:5.3.0
 
 # Install yq and the standard C++ runtime required by Node.js.
 RUN apk add --no-cache libstdc++ yq
